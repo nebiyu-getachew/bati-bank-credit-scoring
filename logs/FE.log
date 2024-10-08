@@ -2,3 +2,4 @@
 2024-10-08 22:34:52,809 INFO creating aggregate features on Amount
 2024-10-08 22:35:31,755 INFO extracted features from TransactionStartTime 
 2024-10-08 22:37:50,296 INFO categorical features are encoded using onehot encoder
+2024-10-08 22:43:16,690 INFO scaled numeric features
