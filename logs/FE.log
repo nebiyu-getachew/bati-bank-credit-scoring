@@ -10,3 +10,38 @@
 2024-10-09 19:44:41,284 INFO scaled numeric features
 2024-10-09 19:44:41,602 INFO RFM Scores are calculated
 2024-10-09 19:48:42,560 INFO  labels is assigned based on RFMS_Score
+2024-10-09 20:03:53,903 INFO Data loaded successfully.
+2024-10-09 20:03:53,903 INFO Data loaded successfully.
+2024-10-09 20:03:54,254 INFO creating aggregate features on Amount
+2024-10-09 20:03:54,254 INFO creating aggregate features on Amount
+2024-10-09 20:03:54,310 INFO extracted features from TransactionStartTime 
+2024-10-09 20:03:54,310 INFO extracted features from TransactionStartTime 
+2024-10-09 20:03:54,358 INFO categorical features are encoded using onehot encoder
+2024-10-09 20:03:54,358 INFO categorical features are encoded using onehot encoder
+2024-10-09 20:04:06,520 INFO scaled numeric features
+2024-10-09 20:04:06,520 INFO scaled numeric features
+2024-10-09 20:04:06,828 INFO RFM Scores are calculated
+2024-10-09 20:04:06,828 INFO RFM Scores are calculated
+2024-10-09 20:04:08,127 INFO  labels is assigned based on RFMS_Score
+2024-10-09 20:04:08,127 INFO  labels is assigned based on RFMS_Score
+2024-10-09 20:04:55,937 INFO Data loaded successfully.
+2024-10-09 20:04:55,937 INFO Data loaded successfully.
+2024-10-09 20:04:55,937 INFO Data loaded successfully.
+2024-10-09 20:04:56,303 INFO creating aggregate features on Amount
+2024-10-09 20:04:56,303 INFO creating aggregate features on Amount
+2024-10-09 20:04:56,303 INFO creating aggregate features on Amount
+2024-10-09 20:04:56,355 INFO extracted features from TransactionStartTime 
+2024-10-09 20:04:56,355 INFO extracted features from TransactionStartTime 
+2024-10-09 20:04:56,355 INFO extracted features from TransactionStartTime 
+2024-10-09 20:04:56,414 INFO categorical features are encoded using onehot encoder
+2024-10-09 20:04:56,414 INFO categorical features are encoded using onehot encoder
+2024-10-09 20:04:56,414 INFO categorical features are encoded using onehot encoder
+2024-10-09 20:05:10,125 INFO scaled numeric features
+2024-10-09 20:05:10,125 INFO scaled numeric features
+2024-10-09 20:05:10,125 INFO scaled numeric features
+2024-10-09 20:05:10,439 INFO RFM Scores are calculated
+2024-10-09 20:05:10,439 INFO RFM Scores are calculated
+2024-10-09 20:05:10,439 INFO RFM Scores are calculated
+2024-10-09 20:05:11,630 INFO  labels is assigned based on RFMS_Score
+2024-10-09 20:05:11,630 INFO  labels is assigned based on RFMS_Score
+2024-10-09 20:05:11,630 INFO  labels is assigned based on RFMS_Score
