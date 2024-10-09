@@ -58,10 +58,11 @@ def evaluate_model(model, X_test, y_test):
     y_pred = model.predict(X_test)
     y_pred_proba = model.predict_proba(X_test)[:, 1]
     
+    # Use pos_label=1 since 'good' has been converted to 1
     accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, pos_label='good')
-    recall = recall_score(y_test, y_pred, pos_label='good')
-    f1 = f1_score(y_test, y_pred, pos_label='good')
+    precision = precision_score(y_test, y_pred, pos_label=1)
+    recall = recall_score(y_test, y_pred, pos_label=1)
+    f1 = f1_score(y_test, y_pred, pos_label=1)
     roc_auc = roc_auc_score(y_test, y_pred_proba)
     
     return {
