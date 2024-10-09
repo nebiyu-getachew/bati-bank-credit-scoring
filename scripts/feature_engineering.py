@@ -136,6 +136,6 @@ def plot_woe_binning(bins, feature):
     """
     plt.figure(figsize=(10, 6))
     sc.woebin_plot(bins[feature])
-    plt.title(f'WoE Binning Plot for {feature}')
+    plt.title(f'{feature}')
     plt.tight_layout()
     plt.show()
