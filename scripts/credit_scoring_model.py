@@ -1,188 +1,183 @@
-# credit_scoring_utils.py
-import numpy as np
 import pandas as pd
-import seaborn as sns
-from sklearn.model_selection import train_test_split, GridSearchCV, learning_curve
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, roc_curve, confusion_matrix
+import numpy as np
 import matplotlib.pyplot as plt
-import joblib
-import pickle
+import seaborn as sns
+from datetime import datetime
+import pytz
+import pandas as pd
 
-def split_data(X, y, test_size=0.2, random_state=42, stratify=True):
-    if stratify:
-        return train_test_split(
-            X, y,
-            test_size=test_size,
-            random_state=random_state,
-            stratify=y
-        )
-    else:
-        return train_test_split(
-            X, y,
-            test_size=test_size,
-            random_state=random_state
-        )
+class CreditScoreRFM:
+    """
+    A class to calculate Recency, Frequency, Monetary values and perform Weight of Evidence (WoE) binning,
+    as well as merging these features into the original feature-engineered dataset.
 
-def create_models():
-    """
-    Create logistic regression, decision tree, random forest, and gradient boosting models.
-    """
-    logistic_model = LogisticRegression(random_state=42)
-    dt_model = DecisionTreeClassifier(random_state=42)
-    rf_model = RandomForestClassifier(random_state=42)
-    gb_model = GradientBoostingClassifier(random_state=42)
-    return logistic_model, dt_model, rf_model, gb_model
+    Attributes:
+    -----------
+    rfm_data : pd.DataFrame
+        The dataset containing the transaction information for RFM calculation.
 
-def train_model(model, X_train, y_train):
-    """
-    Train a given model on the training data.
-    """
-    model.fit(X_train, y_train)
-    return model
+    Methods:
+    --------
+    calculate_rfm():
+        Calculates Recency, Frequency, and Monetary values for each customer in the dataset.
 
-def tune_model(model, X_train, y_train, param_grid):
+    plot_pairplot():
+        Plots a pair plot of the Recency, Frequency, and Monetary values.
+
+    plot_heatmap():
+        Plots a heatmap to visualize correlations between RFM variables.
+
+    plot_histograms():
+        Plots histograms for Recency, Frequency, and Monetary values.
+
+    calculate_rfm_score(weight_recency=0.1, weight_frequency=0.5, weight_monetary=0.4):
+        Calculates an RFM score based on Recency, Frequency, and Monetary values with adjustable weights.
+
+    assign_label():
+        Assigns users into "Good" and "Bad" categories based on the RFM score threshold.
     """
-    Perform hyperparameter tuning for a given model using GridSearchCV.
-    """
-    grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=5, n_jobs=-1)
-    grid_search.fit(X_train, y_train)
-    return grid_search.best_estimator_
+
+    def __init__(self, rfm_data):
+        """
+        Initializes the CreditScoreRFM class with the provided dataset.
+        
+        Parameters:
+        -----------
+        rfm_data : pd.DataFrame
+            The input dataset containing transaction data.
+        """
+        self.rfm_data = rfm_data
+
+    def calculate_rfm(self):
+        """
+        Calculates Recency, Frequency, and Monetary values for each customer.
+
+        Returns:
+            pandas.DataFrame: A DataFrame with additional columns for Recency, Frequency, Monetary, and RFM scores.
+        """
+
+        # Convert 'TransactionStartTime' to datetime and make it timezone-aware (UTC)
+        self.rfm_data['TransactionStartTime'] = pd.to_datetime(self.rfm_data['TransactionStartTime'])
+
+        # Set the end date to the current date and make it timezone-aware (UTC)
+        end_date = pd.Timestamp.utcnow()
+
+        # Calculate Recency, Frequency, and Monetary values
+        self.rfm_data['Last_Access_Date'] = self.rfm_data.groupby('CustomerId')['TransactionStartTime'].transform('max')
+        self.rfm_data['Recency'] = (end_date - self.rfm_data['Last_Access_Date']).dt.days
+        self.rfm_data['Frequency'] = self.rfm_data.groupby('CustomerId')['TransactionId'].transform('count')
+
+        if 'Amount' in self.rfm_data.columns:
+            self.rfm_data['Monetary'] = self.rfm_data.groupby('CustomerId')['Amount'].transform('sum')
+        else:
+            # Handle missing Amount column (e.g., set to 1 for each transaction)
+            self.rfm_data['Monetary'] = 1
+
+        # Remove duplicates to create a summary DataFrame for scoring
+        rfm_data = self.rfm_data[['CustomerId', 'Recency', 'Frequency', 'Monetary']].drop_duplicates()
+
+        # # Calculate RFM scores
+        # rfm_data = self.calculate_rfm_scores(rfm_data)
+
+        # # Assign labels
+        # rfm_data = self.assign_label(rfm_data)
+
+        return rfm_data
     
-def evaluate_model(model, X_test, y_test):
-    """
-    Evaluate the model and return various performance metrics.
-    """
-    y_pred = model.predict(X_test)
-    y_pred_proba = model.predict_proba(X_test)[:, 1]
+    def calculate_rfm_scores(self, rfm_data):
+        """
+        Calculates RFM scores based on the Recency, Frequency, and Monetary values.
+
+        Args:
+            rfm_data (pandas.DataFrame): A DataFrame containing Recency, Frequency, and Monetary values.
+
+        Returns:
+            pandas.DataFrame: A DataFrame with additional columns for RFM scores.
+        """
+        
+        # Quantile-based scoring
+        rfm_data['r_quartile'] = pd.qcut(rfm_data['Recency'], 4, labels=['4', '3', '2', '1'])  # Lower recency is better
+        rfm_data['f_quartile'] = pd.qcut(rfm_data['Frequency'], 4, labels=['1', '2', '3', '4'])  # Higher frequency is better
+        rfm_data['m_quartile'] = pd.qcut(rfm_data['Monetary'], 4, labels=['1', '2', '3', '4'])  # Higher monetary is better
+
+        # Calculate overall RFM Score
+        rfm_data['RFM_Score'] = (rfm_data['r_quartile'].astype(int) * 0.1 +
+                                  rfm_data['f_quartile'].astype(int) * 0.45 +
+                                  rfm_data['m_quartile'].astype(int) * 0.45)
+
+        return rfm_data
     
-    # Use pos_label=1 since 'good' has been converted to 1
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, pos_label=1)
-    recall = recall_score(y_test, y_pred, pos_label=1)
-    f1 = f1_score(y_test, y_pred, pos_label=1)
-    roc_auc = roc_auc_score(y_test, y_pred_proba)
+    def assign_label(self, rfm_data):
+        """ 
+        Assign 'Good' or 'Bad' based on the RFM Score threshold (e.g., median).
+        
+        Args:
+            rfm_data (pandas.DataFrame): A DataFrame with RFM scores.
+        
+        Returns:
+            pandas.DataFrame: Updated DataFrame with Risk_Label column.
+        """
+        high_threshold = rfm_data['RFM_Score'].quantile(0.75)  # Change to .75 to include moderate users
+        low_threshold = rfm_data['RFM_Score'].quantile(0.5)  # Change to .25 to include moderate users
+        rfm_data['Risk_Label'] = rfm_data['RFM_Score'].apply(lambda x: 'Good' if x >= low_threshold else 'Bad')
+        return rfm_data
     
-    return {
-        'accuracy': accuracy,
-        'precision': precision,
-        'recall': recall,
-        'f1': f1,
-        'roc_auc': roc_auc
-    }
+   
+    def calculate_counts(data):
+        grouped_data = data.groupby('RFM_bin')
+        good_count = grouped_data['Risk_Label'].apply(lambda x: (x == 'Good').sum())
+        bad_count = grouped_data['Risk_Label'].apply(lambda x: (x == 'Bad').sum())
+        
+        return good_count, bad_count
 
-def plot_roc_curve(model, X_test, y_test):
-    """
-    Plot the ROC curve for a given model.
-    """
-    y_pred_proba = model.predict_proba(X_test)[:, 1]
-    fpr, tpr, _ = roc_curve(y_test, y_pred_proba, pos_label='good')
-    
-    plt.figure(figsize=(6, 6))
-    plt.plot(fpr, tpr, label=f'ROC Curve (AUC = {roc_auc_score(y_test, y_pred_proba):.4f})')
-    plt.plot([0, 1], [0, 1], linestyle='--', label='Random Classifier')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
-    plt.legend()
-    plt.show()
+    def calculate_woe(good_count, bad_count):
+        total_good = good_count.sum()
+        total_bad = bad_count.sum()
 
-def save_model(model, filename):
-    """
-    Save the trained model to a file.
-    """
-    with open(filename, 'wb') as file:
-        pickle.dump(model, file)
-    print(f"Model saved to {filename}")
+        # Add epsilon (small value) to avoid log(0) or division by zero
+        epsilon = 1e-10
+        
+        good_rate = good_count / (total_good + epsilon)  # Avoid division by zero
+        bad_rate = bad_count / (total_bad + epsilon)     # Avoid division by zero
 
-def load_model(filename):
-    """
-    Load a trained model from a file.
-    """
-    return joblib.load(filename)
+        # Calculate WoE and handle cases where bad_count is zero
+        woe = np.log((good_rate + epsilon) / (bad_rate + epsilon))  # Add epsilon to rates
+        # Calculate IV for each bin
+        iv = ((good_rate - bad_rate) * woe).sum()  # Sum over all bins to get the total IV
+        
+        return woe, iv
 
-def plot_confusion_matrix(model, X_test, y_test):
-    """
-    Plot the confusion matrix for a given model.
-    """
-    y_pred = model.predict(X_test)
-    cm = confusion_matrix(y_test, y_pred)
-    
-    plt.figure(figsize=(6, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-    plt.title('Confusion Matrix')
-    plt.xlabel('Predicted')
-    plt.ylabel('Actual')
-    plt.show()
+    def plot_pairplot(self):
+        """
+        Creates a pair plot to visualize relationships between Recency, Frequency, and Monetary.
+        """
+        sns.pairplot(self.rfm_data[['Recency', 'Frequency', 'Monetary']])
+        plt.suptitle('Pair Plot of rfm Variables', y=1.02)
+        plt.show()
 
-def plot_learning_curve(model, X, y, cv=5):
-    """
-    Plot the learning curve for a given model.
-    """
-    train_sizes, train_scores, test_scores = learning_curve(
-        model, X, y, cv=cv, n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 10))
-    
-    train_mean = np.mean(train_scores, axis=1)
-    train_std = np.std(train_scores, axis=1)
-    test_mean = np.mean(test_scores, axis=1)
-    test_std = np.std(test_scores, axis=1)
-    
-    plt.figure(figsize=(8, 6))
-    plt.plot(train_sizes, train_mean, label='Training score')
-    plt.plot(train_sizes, test_mean, label='Cross-validation score')
-    plt.fill_between(train_sizes, train_mean - train_std, train_mean + train_std, alpha=0.1)
-    plt.fill_between(train_sizes, test_mean - test_std, test_mean + test_std, alpha=0.1)
-    plt.xlabel('Number of training examples')
-    plt.ylabel('Score')
-    plt.title('Learning Curve')
-    plt.legend(loc='best')
-    plt.grid(True)
-    plt.show()
+    def plot_heatmap(self):
+        """
+        Creates a heatmap to visualize correlations between rfm variables.
+        """
+        corr = self.rfm_data[['Recency', 'Frequency', 'Monetary']].corr()
+        sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f")
+        plt.title('Correlation Matrix of rfm Variables')
+        plt.show()
 
+    def plot_histograms(self):
+        """
+        Plots histograms for Recency, Frequency, and Monetary.
+        """
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
-def analyze_feature_correlations(X):
-    """
-    Analyze and plot feature correlations.
-    """
-    corr_matrix = X.corr()
-    plt.figure(figsize=(10, 10))
-    sns.heatmap(corr_matrix, annot=False, cmap='coolwarm')
-    plt.title('Feature Correlation Heatmap')
-    plt.show()
-    
-    # Print highly correlated feature pairs
-    high_corr = (corr_matrix.abs() > 0.8) & (corr_matrix != 1.0)
-    high_corr_pairs = [(corr_matrix.index[i], corr_matrix.columns[j])
-                       for i in range(len(corr_matrix.index))
-                       for j in range(i+1, len(corr_matrix.columns))
-                       if high_corr.iloc[i, j]]
-    if high_corr_pairs:
-        print("Highly correlated feature pairs:")
-        for pair in high_corr_pairs:
-            print(f"{pair[0]} - {pair[1]}: {corr_matrix.loc[pair[0], pair[1]]:.2f}")
-    else:
-        print("No highly correlated feature pairs found.")
+        self.rfm_data['Recency'].hist(bins=20, ax=axes[0])
+        axes[0].set_title('Recency Distribution')
+        
+        self.rfm_data['Frequency'].hist(bins=20, ax=axes[1])
+        axes[1].set_title('Frequency Distribution')
+        
+        self.rfm_data['Monetary'].hist(bins=20, ax=axes[2])
+        axes[2].set_title('Monetary Distribution')
 
-
-def plot_feature_importance(model, X):
-    """
-    Plot feature importance for tree-based models.
-    """
-    if hasattr(model, 'feature_importances_'):
-        feature_importance = pd.DataFrame({
-            'feature': X.columns,
-            'importance': model.feature_importances_
-        }).sort_values('importance', ascending=False)
-
-        plt.figure(figsize=(10, 6))
-        feature_importance.head(10).plot(x='feature', y='importance', kind='bar')
-        plt.title('Top 10 Feature Importances')
-        plt.xlabel('Features')
-        plt.ylabel('Importance')
-        plt.xticks(rotation=45, ha='right')
         plt.tight_layout()
         plt.show()
-    else:
-        print("This model doesn't have feature importances.")
