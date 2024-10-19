@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Customer Risk Prediction</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+
+<body>
+    <div class="main-container">
+        <h1>Customer Risk Detection</h1>
+
+        <div class="prediction-layout {% if prediction %} prediction-present {% else %} no-prediction {% endif %}">
+            <div class="form-container">
+                <h2>Enter Transaction Data</h2>
+                <form action="/predict" method="post" class="form-grid" id="prediction-form">
+                    <div class="form-group">
+                        <label for="TransactionId">Transaction ID:</label>
+                        <input type="text" id="TransactionId" name="TransactionId" required>
+                    </div>
+                    <!-- <div class="form-group">
+                        <label for="BatchId">Batch ID:</label>
+                        <input type="text" id="BatchId" name="BatchId" required>
+                    </div> -->
+                    <div class="form-group">
+                        <label for="CustomerId">Customer ID:</label>
+                        <input type="text" id="CustomerId" name="CustomerId" required>
+                    </div>
+                    <!-- <div class="form-group">
+                        <label for="SubscriptionId">Subscription ID:</label>
+                        <input type="text" id="SubscriptionId" name="SubscriptionId" required>
+                    </div> -->
+                    <!-- <div class="form-group">
+                        <label for="ProductId">Product ID:</label>
+                        <input type="text" id="ProductId" name="ProductId" required>
+                    </div> -->
+                    <div class="form-group">
+                        <label for="ProductCategory">Product Category:</label>
+                        <select id="ProductCategory" name="ProductCategory" required>
+                            <option value="financial_services">Financial Services</option>
+                            <option value="airtime">Airtime</option>
+                            <option value="data_bundles">Data Bundles</option>
+                            <option value="tv">Tv</option>
+                            <option value="utility_bill">Utility Bill</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="ChannelId">Channel:</label>
+                        <select id="ChannelId" name="ChannelId" required>
+                            <option value="ChannelId_3">Web</option>
+                            <option value="ChannelId_2">Android</option>
+                            <option value="ChannelId_5">iOS</option>
+                            <option value="ChannelId_1">Pay Later</option>
+                            <option value="ChannelId_4">Checkout</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="Amount">Transaction Amount:</label>
+                        <input type="number" id="Amount" name="Amount" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="TransactionStartTime">Transaction Start Time:</label>
+                        <input type="date" id="TransactionStartTime" name="TransactionStartTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="PricingStrategy">Pricing Strategy:</label>
+                        <select id="PricingStrategy" name="PricingStrategy" required>
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="btn-group">
+                            <input type="submit" value="Predict" class="submit-btn">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="prediction-result" style="margin-top: 20px;"></div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('prediction-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+    
+            const formData = new FormData(this);
+    
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const resultDiv = document.getElementById('prediction-result');
+                resultDiv.innerHTML = `
+                <div class="result-table">
+                    <h2>Customer Risk</h2>
+                    <table>
+                        <tr>
+                            <th>Customer ID</th>
+                            <th>Risk Label</th>
+
+                        </tr>
+                        <tr>
+                            <td>${data.customer_id}</td>
+                            <td>${data.predicted_risk}</td>
+                        </tr>
+                    </table>
+                </div>`;
+            })
+            .catch(error => {
+                const resultDiv = document.getElementById('prediction-result');
+                resultDiv.innerHTML = `<h2>Error: Unable to fetch prediction.</h2><p>${error.message}</p>`;
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
